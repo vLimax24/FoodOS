@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { login } from "../actions";
 
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,16 @@ type Props = {
 export const instant = false;
 
 export default async function LoginPage({ searchParams }: Props) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect("/");
+  }
+
   const { error, message } = await searchParams;
 
   return (

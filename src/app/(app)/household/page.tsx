@@ -16,17 +16,9 @@ export default async function HouseholdPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f8f6] px-4 py-8 sm:px-6">
+    <div className="min-w-0 space-y-8">
       <div className="mx-auto max-w-3xl space-y-8">
         <div className="space-y-3">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Zurück zum Dashboard
-          </Link>
-
           <div>
             <p className="text-sm font-medium text-[#638c5b]">FOODOS</p>
             <h1 className="text-3xl font-semibold tracking-tight">
@@ -89,6 +81,6 @@ export default async function HouseholdPage() {
           </CardContent>
         </Card>
       </div>
-    </main>
+    </div>
   );
 }

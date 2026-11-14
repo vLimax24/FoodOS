@@ -151,18 +151,42 @@
     box-sizing: border-box;
   }
 
+  html {
+    @apply font-sans;
+    min-height: 100%;
+    width: 100%;
+    overflow-x: clip;
+  }
+
   body {
     @apply bg-background text-foreground;
     margin: 0;
     min-height: 100vh;
-  }
-
-  html {
-    @apply font-sans;
-    min-height: 100%;
+    min-height: 100dvh;
+    width: 100%;
+    overflow-x: clip;
   }
 
   button {
     cursor: pointer;
   }
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
 }

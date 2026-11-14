@@ -1,36 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import {
   Archive,
   CalendarDays,
   ChefHat,
-  ChevronDown,
   ChevronRight,
-  CircleAlert,
-  Home,
-  Leaf,
-  Nfc,
+  Clock3,
   Plus,
   ShoppingBasket,
-  Users,
+  Utensils,
 } from "lucide-react";
 import Link from "next/link";
 import { AddShoppingItemDialog } from "@/components/shopping/add-shopping-item-dialog";
 import { ShoppingItemRow } from "@/components/shopping/shopping-item-row";
-
-const navigation = [
-  { id: "home", label: "Übersicht", mobile: "Home", icon: Home },
-  { id: "shopping", label: "Einkauf", mobile: "Einkauf", icon: ShoppingBasket },
-  { id: "recipes", label: "Rezepte", mobile: "Rezepte", icon: ChefHat },
-  { id: "pantry", label: "Vorräte", mobile: "Vorräte", icon: Archive },
-  {
-    id: "planner",
-    label: "Essensplanung",
-    mobile: "Planung",
-    icon: CalendarDays,
-  },
-] as const;
 
 type ShoppingItem = {
   id: string;
@@ -40,419 +22,436 @@ type ShoppingItem = {
   is_completed: boolean;
 };
 
+type PantryItem = {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string | null;
+  min_quantity: number | null;
+  category: string | null;
+};
+
+type LatestRecipe = {
+  id: string;
+  title: string;
+  image_url: string | null;
+  category: string | null;
+  servings: number;
+  prep_time_minutes: number | null;
+  cook_time_minutes: number | null;
+  difficulty: string | null;
+  created_at: string;
+};
+
 type HomeDashboardProps = {
   householdName: string;
   userName: string;
   shoppingItemCount: number;
   shoppingItems: ShoppingItem[];
+  pantryItemCount: number;
+  lowStockCount: number;
+  pantryItems: PantryItem[];
+  recipeCount: number;
+  latestRecipe: LatestRecipe | null;
 };
 
-type Screen = (typeof navigation)[number]["id"] | "nfc" | "tags";
+function getPantryStatus(item: PantryItem) {
+  if (item.quantity <= 0) {
+    return {
+      label: "Leer",
+      className: "bg-[#fceceb] text-[#b75b50]",
+    };
+  }
+
+  if (item.min_quantity !== null && item.quantity <= item.min_quantity) {
+    return {
+      label: "Wenig",
+      className: "bg-[#fbf1df] text-[#a47b36]",
+    };
+  }
+
+  return {
+    label: "Vorhanden",
+    className: "bg-[#edf4ed] text-[#56815c]",
+  };
+}
+
+function formatDifficulty(difficulty: string | null) {
+  switch (difficulty) {
+    case "einfach":
+      return "Einfach";
+    case "mittel":
+      return "Mittel";
+    case "anspruchsvoll":
+      return "Anspruchsvoll";
+    default:
+      return null;
+  }
+}
 
 export default function HomeDashboard({
   householdName,
   userName,
   shoppingItemCount,
   shoppingItems,
+  pantryItemCount,
+  lowStockCount,
+  pantryItems,
+  recipeCount,
+  latestRecipe,
 }: HomeDashboardProps) {
-  const [screen, setScreen] = useState<Screen>("home");
+  const firstName = userName.split(" ")[0];
 
-  const activeScreen = screen === "tags" || screen === "nfc" ? "home" : screen;
-  const currentPage = navigation.find((item) => item.id === activeScreen);
+  const totalRecipeTime = latestRecipe
+    ? (latestRecipe.prep_time_minutes ?? 0) +
+      (latestRecipe.cook_time_minutes ?? 0)
+    : 0;
 
   return (
-    <div className="min-h-screen bg-[#f7f8f6] text-[#20251f]">
-      {/* Desktop Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-[#e9ece7] bg-white px-5 py-6 md:flex">
-        <div className="mb-9 flex items-center gap-2.5 px-2">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-[#e8f2e8] text-[#39734a]">
-            <Leaf size={21} />
-          </div>
-          <span className="text-xl font-semibold tracking-tight">FoodOS</span>
-        </div>
-
-        <Link
-          href="/household"
-          className="mb-8 flex items-center gap-3 rounded-xl border border-[#e9ece7] p-3 text-left transition hover:bg-[#f8faf7]"
-        >
-          <div className="flex size-9 items-center justify-center rounded-lg bg-[#edf2ed] text-[#55745b]">
-            <Users size={18} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-[#899188]">Haushalt</p>
-            <p className="font-medium">{householdName}</p>
-          </div>
-          <ChevronDown size={16} className="text-[#899188]" />
-        </Link>
-
-        <p className="mb-3 px-3 text-[11px] font-semibold tracking-[0.12em] text-[#9aa198]">
-          MENÜ
+    <div className="min-w-0 space-y-8">
+      {/* Greeting */}
+      <section>
+        <p className="mb-2 text-sm font-medium tracking-wide text-[#7d8979]">
+          FOODOS · ÜBERSICHT
         </p>
 
-        <nav className="flex flex-col gap-1">
-          {navigation.map(({ id, label, icon: Icon }) =>
-            id === "shopping" ? (
-              <Link
-                key={id}
-                href="/shopping"
-                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#687066] transition hover:bg-[#f7f8f6] hover:text-[#20251f]"
-              >
-                <Icon size={19} />
-                <span className="flex-1 text-left">{label}</span>
-                <span className="rounded-full bg-[#dcebdc] px-2 py-0.5 text-xs font-medium text-[#39734a]">
-                  {shoppingItemCount}
-                </span>
-              </Link>
-            ) : id === "pantry" ? (
-              <Link
-                key={id}
-                href="/pantry"
-                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#687066] transition hover:bg-[#f7f8f6] hover:text-[#20251f]"
-              >
-                <Icon size={19} />
-                <span className="flex-1 text-left">{label}</span>
-                <span className="rounded-full bg-[#dcebdc] px-2 py-0.5 text-xs font-medium text-[#39734a]">
-                  {shoppingItemCount}
-                </span>
-              </Link>
-            ) : (
-              <button
-                key={id}
-                onClick={() => setScreen(id)}
-                className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition ${
-                  activeScreen === id
-                    ? "bg-[#edf4ed] font-semibold text-[#39734a]"
-                    : "text-[#687066] hover:bg-[#f7f8f6] hover:text-[#20251f]"
-                }`}
-              >
-                <Icon size={19} />
-                <span className="flex-1 text-left">{label}</span>
-              </button>
-            ),
-          )}
-        </nav>
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          Hallo, {firstName}!
+        </h1>
 
-        <p className="mb-3 mt-9 px-3 text-[11px] font-semibold tracking-[0.12em] text-[#9aa198]">
-          FUNKTIONEN
+        <p className="mt-2 text-sm text-[#81897f] sm:text-base">
+          Was steht heute bei euch an?
         </p>
+      </section>
 
-        <nav className="flex flex-col gap-1">
-          <button
-            onClick={() => setScreen("nfc")}
-            className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition ${
-              screen === "nfc"
-                ? "bg-[#edf4ed] font-semibold text-[#39734a]"
-                : "text-[#687066] hover:bg-[#f7f8f6]"
-            }`}
-          >
-            <Nfc size={19} />
-            NFC Schnellzugriff
-          </button>
-          <button
-            onClick={() => setScreen("tags")}
-            className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition ${
-              screen === "tags"
-                ? "bg-[#edf4ed] font-semibold text-[#39734a]"
-                : "text-[#687066] hover:bg-[#f7f8f6]"
-            }`}
-          >
-            <CircleAlert size={19} />
-            NFC-Tags
-          </button>
-        </nav>
-
-        <div className="mt-auto flex items-center gap-3 border-t border-[#edf0eb] pt-5">
-          <div className="flex size-10 items-center justify-center rounded-full bg-[#e8eee4] font-semibold text-[#55745b]">
-            L
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">{userName}</p>
-            <p className="truncate text-xs text-[#92998f]">FoodOS-Mitglied</p>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <main className="min-h-screen pb-24 md:ml-64 md:pb-8">
-        <header className="flex h-16 items-center justify-between border-b border-[#e9ece7] bg-white px-5 md:px-10">
-          <Link
-            href="/household"
-            className="group flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition hover:bg-[#f7f8f6]"
-          >
-            <div className="flex size-8 items-center justify-center rounded-lg bg-[#edf4ed] text-[#39734a]">
-              <Users size={17} />
+      {/* Latest recipe */}
+      <section className="overflow-hidden rounded-2xl border border-[#e8ece5] bg-white md:flex">
+        {latestRecipe ? (
+          <>
+            <div
+              className="min-h-48 flex-1 bg-[#edf2eb] bg-cover bg-center sm:min-h-64 md:min-h-72"
+              style={
+                latestRecipe.image_url
+                  ? { backgroundImage: `url("${latestRecipe.image_url}")` }
+                  : undefined
+              }
+            >
+              {!latestRecipe.image_url && (
+                <div className="flex h-full min-h-48 items-center justify-center sm:min-h-64 md:min-h-72">
+                  <ChefHat
+                    size={64}
+                    strokeWidth={1}
+                    className="text-[#9aaf96]"
+                  />
+                </div>
+              )}
             </div>
 
-            <div>
-              <p className="text-sm font-semibold text-[#30382f]">
-                Haushalt verwalten
+            <div className="flex min-w-0 flex-1 flex-col justify-center p-5 sm:p-7 md:p-9">
+              <p className="text-xs font-semibold tracking-[0.13em] text-[#739276]">
+                EUER KOCHBUCH
               </p>
-              <p className="font-medium">{householdName}</p>
+
+              <h2 className="mt-2 text-2xl font-semibold">
+                {latestRecipe.title}
+              </h2>
+
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#858d82]">
+                {totalRecipeTime > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <Clock3 size={15} />
+                    {totalRecipeTime} Min.
+                  </span>
+                )}
+
+                {formatDifficulty(latestRecipe.difficulty) && (
+                  <span>{formatDifficulty(latestRecipe.difficulty)}</span>
+                )}
+
+                <span>{latestRecipe.servings} Portionen</span>
+              </div>
+
+              {latestRecipe.category && (
+                <p className="mt-3 text-xs text-[#92998f]">
+                  {latestRecipe.category}
+                </p>
+              )}
+
+              <Link
+                href={`/recipes/${latestRecipe.id}`}
+                className="mt-6 flex w-fit items-center gap-2 rounded-xl bg-[#edf4ed] px-4 py-2.5 text-sm font-semibold text-[#39734a] transition-colors hover:bg-[#e1ede1]"
+              >
+                Rezept ansehen
+                <ChevronRight size={16} />
+              </Link>
+            </div>
+          </>
+        ) : (
+          <div className="flex min-h-64 flex-1 flex-col items-center justify-center p-8 text-center">
+            <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-[#edf4ed] text-[#56815c]">
+              <ChefHat size={28} />
             </div>
 
-            <ChevronRight
-              size={15}
-              className="ml-1 text-[#899188] transition group-hover:translate-x-0.5"
-            />
+            <h2 className="text-xl font-semibold">Euer Kochbuch wartet!</h2>
+
+            <p className="mt-2 max-w-sm text-sm text-[#81897f]">
+              Speichert euer erstes Rezept und habt eure Lieblingsgerichte immer
+              griffbereit.
+            </p>
+
+            <Link
+              href="/recipes/new"
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#56815c] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#456e4b]"
+            >
+              <Plus size={16} />
+              Rezept erstellen
+            </Link>
+          </div>
+        )}
+      </section>
+
+      {/* Statistics */}
+      <section className="grid min-w-0 gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-[#e8ece5] bg-white p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-[#81897f]">Einkaufsliste</p>
+            <ShoppingBasket size={19} className="text-[#56815c]" />
+          </div>
+
+          <p className="mt-3 text-3xl font-semibold tabular-nums">
+            {shoppingItemCount}
+          </p>
+
+          <p className="mt-1 text-xs text-[#92998f]">Offene Lebensmittel</p>
+        </div>
+
+        <div className="rounded-2xl border border-[#e8ece5] bg-white p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-[#81897f]">Vorräte</p>
+            <Archive size={19} className="text-[#b68a3c]" />
+          </div>
+
+          <p className="mt-3 text-3xl font-semibold tabular-nums">
+            {pantryItemCount}
+          </p>
+
+          <p className="mt-1 text-xs text-[#92998f]">
+            {lowStockCount > 0
+              ? `${lowStockCount} bald nachkaufen`
+              : "Alles im Blick"}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-[#e8ece5] bg-white p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-[#81897f]">Rezepte</p>
+            <ChefHat size={19} className="text-[#56815c]" />
+          </div>
+
+          <p className="mt-3 text-3xl font-semibold tabular-nums">
+            {recipeCount}
+          </p>
+
+          <p className="mt-1 text-xs text-[#92998f]">In eurem Kochbuch</p>
+        </div>
+      </section>
+
+      {/* Shopping and pantry */}
+      <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+        {/* Shopping list */}
+        <section className="min-w-0 rounded-2xl border border-[#e8ece5] bg-white p-4 sm:p-6">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4ed] text-[#56815c]">
+                <ShoppingBasket size={20} />
+              </div>
+
+              <div className="min-w-0">
+                <h3 className="font-semibold">Einkaufsliste</h3>
+                <p className="text-xs text-[#92998f]">
+                  Euer gemeinsamer Einkauf
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <AddShoppingItemDialog />
+
+              <Link
+                href="/shopping"
+                className="text-sm font-medium text-[#56815c] hover:underline"
+              >
+                Öffnen
+              </Link>
+            </div>
+          </div>
+
+          <p className="mb-4 text-2xl font-semibold">
+            {shoppingItemCount} Lebensmittel
+          </p>
+
+          <div className="space-y-3 text-sm text-[#697166]">
+            {shoppingItems.length > 0 ? (
+              shoppingItems.map((item) => (
+                <ShoppingItemRow
+                  key={`${item.id}-${item.is_completed}`}
+                  id={item.id}
+                  name={item.name}
+                  quantity={item.quantity}
+                  unit={item.unit}
+                  isCompleted={item.is_completed}
+                />
+              ))
+            ) : (
+              <div className="rounded-xl bg-[#f7f9f6] px-4 py-5 text-center">
+                <ShoppingBasket
+                  size={24}
+                  className="mx-auto mb-2 text-[#a5b3a1]"
+                />
+
+                <p className="text-sm font-medium text-[#697166]">
+                  Eure Einkaufsliste ist noch leer
+                </p>
+
+                <p className="mt-1 text-xs text-[#92998f]">
+                  Fügt euren ersten Artikel hinzu!
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Pantry preview */}
+        <section className="min-w-0 rounded-2xl border border-[#e8ece5] bg-white p-4 sm:p-6">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fbf1df] text-[#b68a3c]">
+                <Archive size={20} />
+              </div>
+
+              <div>
+                <h3 className="font-semibold">Vorräte</h3>
+                <p className="text-xs text-[#92998f]">
+                  {lowStockCount > 0
+                    ? `${lowStockCount} Artikel mit niedrigem Bestand`
+                    : "Euer Vorrat im Überblick"}
+                </p>
+              </div>
+            </div>
+
+            {lowStockCount > 0 && (
+              <span className="rounded-full bg-[#fbf1df] px-3 py-1 text-xs font-medium text-[#a47b36]">
+                Nachkaufen
+              </span>
+            )}
+          </div>
+
+          {pantryItems.length > 0 ? (
+            <div className="space-y-4">
+              {pantryItems.map((item) => {
+                const status = getPantryStatus(item);
+
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {item.name}
+                      </p>
+
+                      <p className="text-xs text-[#92998f]">
+                        {item.quantity} {item.unit ?? ""}
+                        {item.category ? ` · ${item.category}` : ""}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${status.className}`}
+                    >
+                      {status.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-xl bg-[#f7f9f6] px-4 py-5 text-center">
+              <Archive size={24} className="mx-auto mb-2 text-[#a5b3a1]" />
+
+              <p className="text-sm font-medium text-[#697166]">
+                Noch keine Vorräte vorhanden
+              </p>
+
+              <p className="mt-1 text-xs text-[#92998f]">
+                Fügt eure ersten Lebensmittel hinzu!
+              </p>
+            </div>
+          )}
+
+          <Link
+            href="/pantry"
+            className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-[#56815c] hover:underline"
+          >
+            Vorräte verwalten
+            <ChevronRight size={15} />
+          </Link>
+        </section>
+      </div>
+
+      {/* Quick actions */}
+      <section>
+        <h3 className="mb-4 text-lg font-semibold">Schnellzugriff</h3>
+
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Link
+            href="/shopping"
+            className="flex min-w-0 items-center gap-3 rounded-xl border border-[#e8ece5] bg-white p-4 transition-colors hover:border-[#c8d9c8] hover:bg-[#fbfdfb]"
+          >
+            <Plus className="shrink-0 text-[#56815c]" />
+
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">
+                Lebensmittel hinzufügen
+              </span>
+              <span className="text-xs text-[#92998f]">Zur Einkaufsliste</span>
+            </span>
           </Link>
 
-          <button className="flex items-center gap-2 rounded-full border border-[#e9ece7] py-1.5 pl-1.5 pr-3 transition hover:bg-[#f7f8f6]">
-            <div className="flex size-7 items-center justify-center rounded-full bg-[#e8eee4] text-xs font-semibold text-[#55745b]">
-              L
-            </div>
-            <span className="hidden text-sm font-medium sm:block">
-              {userName.split(" ")[0]}
+          <Link
+            href="/recipes"
+            className="flex min-w-0 items-center gap-3 rounded-xl border border-[#e8ece5] bg-white p-4 transition-colors hover:border-[#c8d9c8] hover:bg-[#fbfdfb]"
+          >
+            <ChefHat className="shrink-0 text-[#56815c]" />
+
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">
+                Rezept entdecken
+              </span>
+              <span className="text-xs text-[#92998f]">
+                {recipeCount} Rezepte im Kochbuch
+              </span>
             </span>
-            <ChevronDown size={14} className="text-[#899188]" />
-          </button>
-        </header>
+          </Link>
 
-        <div className="mx-auto max-w-7xl px-5 py-8 md:px-10 md:py-10">
-          {screen === "home" ? (
-            <>
-              <div className="mb-8">
-                <p className="mb-2 text-sm font-medium text-[#7d8979]">
-                  SAMSTAG, 14. NOVEMBER
-                </p>
-                <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-                  Guten Morgen!
-                </h1>
-                <p className="mt-2 text-[#81897f]">
-                  Was steht heute bei euch an?
-                </p>
-              </div>
+          <Link
+            href="/household"
+            className="flex min-w-0 items-center gap-3 rounded-xl border border-[#e8ece5] bg-white p-4 transition-colors hover:border-[#c8d9c8] hover:bg-[#fbfdfb] sm:col-span-2 lg:col-span-1"
+          >
+            <CalendarDays className="shrink-0 text-[#56815c]" />
 
-              {/* Today's meal */}
-              <section className="mb-8 overflow-hidden rounded-2xl border border-[#e8ece5] bg-white md:flex">
-                <div className="min-h-52 flex-1 bg-[url('https://images.unsplash.com/photo-1792354441702-572e1ffaca2b?auto=format&fit=crop&w=1200&q=85')] bg-cover bg-center md:min-h-72" />
-                <div className="flex flex-1 flex-col justify-center p-6 md:p-9">
-                  <p className="text-xs font-semibold tracking-[0.13em] text-[#739276]">
-                    HEUTE MITTAG
-                  </p>
-                  <h2 className="mt-2 text-2xl font-semibold">Lasagne</h2>
-                  <p className="mt-2 text-sm text-[#858d82]">
-                    45 Min. · Mittel · 4 Portionen
-                  </p>
-
-                  <div className="mt-7">
-                    <div className="mb-2 flex justify-between text-xs">
-                      <span className="text-[#7c8579]">Zutaten vorhanden</span>
-                      <span className="font-semibold text-[#39734a]">
-                        3 von 5
-                      </span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-[#edf0eb]">
-                      <div className="h-full w-3/5 rounded-full bg-[#79a47d]" />
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setScreen("recipes")}
-                    className="mt-6 flex w-fit items-center gap-2 rounded-xl bg-[#edf4ed] px-4 py-2.5 text-sm font-semibold text-[#39734a] transition hover:bg-[#e1ede1]"
-                  >
-                    Rezept ansehen
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              </section>
-
-              {/* Overview cards */}
-              <div className="grid gap-5 lg:grid-cols-2">
-                <section className="rounded-2xl border border-[#e8ece5] bg-white p-6">
-                  <div className="mb-5 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-10 items-center justify-center rounded-xl bg-[#edf4ed] text-[#56815c]">
-                        <ShoppingBasket size={20} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">Einkaufsliste</h3>
-                        <p className="text-xs text-[#92998f]">
-                          Euer gemeinsamer Einkauf
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <AddShoppingItemDialog />
-
-                      <Link
-                        href="/shopping"
-                        className="text-sm font-medium text-[#56815c] hover:underline"
-                      >
-                        Öffnen
-                      </Link>
-                    </div>
-                  </div>
-
-                  <p className="mb-4 text-2xl font-semibold">
-                    {shoppingItemCount} Lebensmittel
-                  </p>
-
-                  <div className="space-y-3 text-sm text-[#697166]">
-                    {shoppingItems.length > 0 ? (
-                      shoppingItems.map((item) => (
-                        <ShoppingItemRow
-                          key={`${item.id}-${item.is_completed}`}
-                          id={item.id}
-                          name={item.name}
-                          quantity={item.quantity}
-                          unit={item.unit}
-                          isCompleted={item.is_completed}
-                        />
-                      ))
-                    ) : (
-                      <div className="rounded-xl bg-[#f7f9f6] px-4 py-5 text-center">
-                        <ShoppingBasket
-                          size={24}
-                          className="mx-auto mb-2 text-[#a5b3a1]"
-                        />
-                        <p className="text-sm font-medium text-[#697166]">
-                          Eure Einkaufsliste ist noch leer
-                        </p>
-                        <p className="mt-1 text-xs text-[#92998f]">
-                          Fügt euren ersten Artikel hinzu!
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </section>
-
-                <section className="rounded-2xl border border-[#e8ece5] bg-white p-6">
-                  <div className="mb-5 flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-xl bg-[#fbf1df] text-[#b68a3c]">
-                      <Archive size={20} />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">Vorräte</h3>
-                      <p className="text-xs text-[#92998f]">Bald nachkaufen</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium">Milch</p>
-                        <p className="text-xs text-[#92998f]">Kühlschrank</p>
-                      </div>
-                      <span className="rounded-full bg-[#fceceb] px-3 py-1 text-xs font-medium text-[#b75b50]">
-                        Leer
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium">Reis</p>
-                        <p className="text-xs text-[#92998f]">Vorratsschrank</p>
-                      </div>
-                      <span className="rounded-full bg-[#fbf1df] px-3 py-1 text-xs font-medium text-[#a47b36]">
-                        Wenig
-                      </span>
-                    </div>
-                  </div>
-                </section>
-              </div>
-
-              {/* Quick actions */}
-              <section className="mt-8">
-                <h3 className="mb-4 text-lg font-semibold">Schnellzugriff</h3>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <button
-                    onClick={() => setScreen("shopping")}
-                    className="flex items-center gap-3 rounded-xl border border-[#e8ece5] bg-white p-4 text-left transition hover:border-[#c8d9c8] hover:bg-[#fbfdfb]"
-                  >
-                    <Plus className="text-[#56815c]" />
-                    <span>
-                      <span className="block text-sm font-semibold">
-                        Lebensmittel hinzufügen
-                      </span>
-                      <span className="text-xs text-[#92998f]">
-                        Zur Einkaufsliste
-                      </span>
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setScreen("recipes")}
-                    className="flex items-center gap-3 rounded-xl border border-[#e8ece5] bg-white p-4 text-left transition hover:border-[#c8d9c8] hover:bg-[#fbfdfb]"
-                  >
-                    <ChefHat className="text-[#56815c]" />
-                    <span>
-                      <span className="block text-sm font-semibold">
-                        Rezept entdecken
-                      </span>
-                      <span className="text-xs text-[#92998f]">
-                        Familienkochbuch
-                      </span>
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setScreen("nfc")}
-                    className="flex items-center gap-3 rounded-xl border border-[#e8ece5] bg-white p-4 text-left transition hover:border-[#c8d9c8] hover:bg-[#fbfdfb]"
-                  >
-                    <Nfc className="text-[#56815c]" />
-                    <span>
-                      <span className="block text-sm font-semibold">
-                        NFC Schnellzugriff
-                      </span>
-                      <span className="text-xs text-[#92998f]">
-                        Direkt Lebensmittel ergänzen
-                      </span>
-                    </span>
-                  </button>
-                </div>
-              </section>
-            </>
-          ) : (
-            <div className="rounded-2xl border border-[#e8ece5] bg-white p-8">
-              <p className="mb-2 text-sm font-medium text-[#739276]">FOODOS</p>
-              <h1 className="text-3xl font-semibold">
-                {currentPage?.label ??
-                  (screen === "nfc" ? "NFC Schnellzugriff" : "NFC-Tags")}
-              </h1>
-              <p className="mt-3 max-w-lg text-[#81897f]">
-                Dieser Bereich bekommt im nächsten Schritt seine eigene
-                Oberfläche. Die Navigation funktioniert bereits.
-              </p>
-            </div>
-          )}
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">
+                Haushalt verwalten
+              </span>
+              <span className="truncate text-xs text-[#92998f]">
+                {householdName}
+              </span>
+            </span>
+          </Link>
         </div>
-      </main>
-
-      {/* Mobile bottom navigation */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[#e9ece7] bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur md:hidden">
-        {navigation.map(({ id, mobile, icon: Icon }) =>
-          id === "shopping" ? (
-            <Link
-              key={id}
-              href="/shopping"
-              className="flex flex-col items-center gap-1 py-2 text-[10px] text-[#92998f] transition"
-            >
-              <Icon size={21} />
-              {mobile}
-            </Link>
-          ) : id === "pantry" ? (
-            <Link
-              key={id}
-              href="/pantry"
-              className="flex flex-col items-center gap-1 py-2 text-[10px] text-[#92998f] transition"
-            >
-              <Icon size={21} />
-              {mobile}
-            </Link>
-          ) : (
-            <button
-              key={id}
-              onClick={() => setScreen(id)}
-              className={`flex flex-col items-center gap-1 py-2 text-[10px] transition ${
-                activeScreen === id
-                  ? "font-semibold text-[#39734a]"
-                  : "text-[#92998f]"
-              }`}
-            >
-              <Icon size={21} />
-              {mobile}
-            </button>
-          ),
-        )}
-      </nav>
+      </section>
     </div>
   );
 }

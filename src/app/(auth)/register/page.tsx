@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { register } from "../actions";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,16 @@ type Props = {
 };
 
 export default async function RegisterPage({ searchParams }: Props) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect("/");
+  }
+
   const { error } = await searchParams;
 
   return (
