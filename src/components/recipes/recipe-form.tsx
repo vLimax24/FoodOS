@@ -19,6 +19,7 @@ import {
   type RecipeIngredientInput,
   type RecipeStepInput,
 } from "@/app/actions/recipes";
+import { UNITS } from "@/lib/units";
 
 const categories = [
   "Frühstück",
@@ -135,11 +136,12 @@ export default function RecipeForm({
       }));
   });
 
-  const [nextId, setNextId] = useState(
-    Math.max(
-      initialRecipe?.recipe_ingredients.length ?? 0,
-      initialRecipe?.recipe_steps.length ?? 0,
-    ),
+  const [nextIngredientId, setNextIngredientId] = useState(
+    initialRecipe?.recipe_ingredients.length ?? 1,
+  );
+
+  const [nextStepId, setNextStepId] = useState(
+    initialRecipe?.recipe_steps.length ?? 1,
   );
 
   const [error, setError] = useState<string | null>(null);
@@ -203,8 +205,11 @@ export default function RecipeForm({
   }
 
   function addIngredient() {
-    setIngredients((current) => [...current, createIngredient(nextId)]);
-    setNextId((current) => current + 1);
+    setIngredients((current) => [
+      ...current,
+      createIngredient(nextIngredientId),
+    ]);
+    setNextIngredientId((current) => current + 1);
   }
 
   function removeIngredient(localId: number) {
@@ -222,8 +227,8 @@ export default function RecipeForm({
   }
 
   function addStep() {
-    setSteps((current) => [...current, createStep(nextId)]);
-    setNextId((current) => current + 1);
+    setSteps((current) => [...current, createStep(nextStepId)]);
+    setNextStepId((current) => current + 1);
   }
 
   function removeStep(localId: number) {
@@ -627,7 +632,7 @@ export default function RecipeForm({
                   className={inputClass}
                 />
 
-                <input
+                <select
                   value={ingredient.unit}
                   onChange={(event) =>
                     updateIngredient(
@@ -636,10 +641,21 @@ export default function RecipeForm({
                       event.target.value,
                     )
                   }
-                  placeholder="Einheit"
                   aria-label={`Einheit der Zutat ${index + 1}`}
                   className={inputClass}
-                />
+                >
+                  <option value="">Keine Einheit</option>
+
+                  {UNITS.map((group) => (
+                    <optgroup key={group.label} label={group.label}>
+                      {group.options.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
               </div>
 
               <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">

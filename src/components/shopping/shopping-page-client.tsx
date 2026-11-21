@@ -1,12 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, ShoppingBasket } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ShoppingBasket,
+  ShoppingCart,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-
 import { AddShoppingItemDialog } from "@/components/shopping/add-shopping-item-dialog";
 import { ShoppingItemRow } from "@/components/shopping/shopping-item-row";
 import { SHOPPING_CATEGORIES } from "@/lib/shopping/categories";
@@ -30,171 +36,309 @@ export function ShoppingPageClient({
   householdName,
   items,
 }: ShoppingPageClientProps) {
+  const [isShoppingMode, setIsShoppingMode] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
+
   const openItems = items.filter((item) => !item.is_completed);
   const completedItems = items.filter((item) => item.is_completed);
+
+  const progress =
+    items.length > 0
+      ? Math.round((completedItems.length / items.length) * 100)
+      : 0;
 
   const groupedItems = SHOPPING_CATEGORIES.map((category) => ({
     ...category,
     items: openItems.filter((item) => item.category === category.value),
   })).filter((category) => category.items.length > 0);
 
-  return (
-    <main className="min-h-screen bg-[#f7f8f6]">
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:py-12">
-        {/* Header */}
-        <div className="mb-8">
-          <Link
-            href="/"
-            className="-ml-3 mb-5 inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Zurück zur Übersicht
-          </Link>
+  const uncategorizedItems = openItems.filter(
+    (item) =>
+      !SHOPPING_CATEGORIES.some((category) => category.value === item.category),
+  );
 
-          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-            <div>
-              <p className="mb-2 text-sm font-medium text-green-700">
+  return (
+    <main className="min-h-screen bg-[#f6f8f4]">
+      <div className="mx-auto max-w-3xl px-4 pb-12 pt-6 sm:px-6 sm:pt-10">
+        {/* Navigation */}
+        <Link
+          href="/"
+          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-[#788275] transition-colors hover:text-[#638c5b]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Übersicht
+        </Link>
+
+        {/* Header */}
+        <header className="mb-8">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="mb-2 text-sm font-semibold text-[#638c5b]">
                 {householdName}
               </p>
 
-              <h1 className="text-3xl font-bold tracking-tight text-[#202820]">
+              <h1 className="text-3xl font-bold tracking-tight text-[#202820] sm:text-4xl">
                 Einkaufsliste
               </h1>
 
-              <p className="mt-2 text-sm text-muted-foreground">
-                Alles, was ihr noch besorgen müsst.
+              <p className="mt-2 text-sm text-[#818a7e]">
+                Alles, was ihr für Zuhause braucht.
               </p>
             </div>
 
-            <AddShoppingItemDialog />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#e6eee2] text-[#638c5b] sm:h-14 sm:w-14">
+              <ShoppingBasket className="h-6 w-6 sm:h-7 sm:w-7" />
+            </div>
           </div>
-        </div>
+
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            {isShoppingMode ? (
+              <Button
+                variant="outline"
+                onClick={() => setIsShoppingMode(false)}
+                className="h-11 gap-2 rounded-xl border-[#dce5d7] bg-white px-5 text-[#52664d] hover:bg-[#edf3e9]"
+              >
+                <X className="h-4 w-4" />
+                Einkauf beenden
+              </Button>
+            ) : (
+              <>
+                <Button
+                  onClick={() => setIsShoppingMode(true)}
+                  disabled={openItems.length === 0}
+                  className="h-11 gap-2 rounded-xl bg-[#638c5b] px-5 text-white shadow-sm hover:bg-[#52764b]"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  Einkauf starten
+                </Button>
+
+                <AddShoppingItemDialog />
+              </>
+            )}
+          </div>
+        </header>
 
         {/* Overview */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2">
-          <Card className="border-[#e8ece5] bg-white shadow-none">
-            <CardContent className="flex items-center gap-4 p-5">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-50 text-green-700">
-                <ShoppingBasket className="h-5 w-5" />
+        {!isShoppingMode && (
+          <section className="mb-8 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-[#e8ede4] bg-white p-4 sm:p-5">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-[#eaf1e6] text-[#638c5b]">
+                <ShoppingBasket className="h-4 w-4" />
               </div>
 
+              <p className="text-3xl font-bold tracking-tight text-[#202820]">
+                {openItems.length}
+              </p>
+              <p className="mt-1 text-xs font-medium text-[#818a7e] sm:text-sm">
+                Noch zu kaufen
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[#e8ede4] bg-white p-4 sm:p-5">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-[#f0f2ee] text-[#71806b]">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+
+              <p className="text-3xl font-bold tracking-tight text-[#202820]">
+                {completedItems.length}
+              </p>
+              <p className="mt-1 text-xs font-medium text-[#818a7e] sm:text-sm">
+                Bereits erledigt
+              </p>
+            </div>
+          </section>
+        )}
+
+        {/* Shopping progress */}
+        {isShoppingMode && (
+          <section className="mb-8 rounded-2xl border border-[#dce8d6] bg-[#edf3e9] p-5">
+            <div className="mb-4 flex items-center justify-between gap-4">
               <div>
-                <p className="text-2xl font-bold text-[#202820]">
-                  {openItems.length}
+                <p className="font-semibold text-[#30442d]">Dein Einkauf</p>
+                <p className="mt-1 text-sm text-[#70816a]">
+                  {completedItems.length} von {items.length} erledigt
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Noch zu erledigen
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-[#e8ece5] bg-white shadow-none">
-            <CardContent className="flex items-center gap-4 p-5">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-600">
-                <CheckCircle2 className="h-5 w-5" />
               </div>
 
-              <div>
-                <p className="text-2xl font-bold text-[#202820]">
-                  {completedItems.length}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Bereits erledigt
-                </p>
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border-[3px] border-[#638c5b] bg-white text-sm font-bold text-[#52764b]">
+                {progress}%
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+
+            <div className="h-2 overflow-hidden rounded-full bg-[#d9e5d3]">
+              <div
+                className="h-full rounded-full bg-[#638c5b] transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </section>
+        )}
 
         {/* Open items */}
-        <Card className="border-[#e8ece5] bg-white shadow-none">
-          <CardContent className="p-5 sm:p-6">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold text-[#202820]">Offen</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Diese Artikel fehlen noch.
-                </p>
-              </div>
-
-              <span className="rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-700">
-                {openItems.length}
-              </span>
+        <section>
+          <div className="mb-4 flex items-end justify-between">
+            <div>
+              <h2 className="text-lg font-bold tracking-tight text-[#202820]">
+                {isShoppingMode ? "Noch einzukaufen" : "Deine Produkte"}
+              </h2>
+              <p className="mt-1 text-sm text-[#818a7e]">
+                {openItems.length === 1
+                  ? "1 Produkt wartet auf dich"
+                  : `${openItems.length} Produkte warten auf dich`}
+              </p>
             </div>
 
-            {openItems.length > 0 ? (
-              <div className="space-y-6">
-                {groupedItems.map((category) => (
-                  <div key={category.value}>
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="text-lg">{category.emoji}</span>
+            <span className="rounded-full bg-[#e6eee2] px-3 py-1 text-sm font-semibold text-[#52764b]">
+              {openItems.length}
+            </span>
+          </div>
 
-                      <h3 className="text-sm font-semibold text-[#202820]">
+          {openItems.length > 0 ? (
+            <div className="space-y-4">
+              {groupedItems.map((category) => (
+                <div
+                  key={category.value}
+                  className="overflow-hidden rounded-2xl border border-[#e8ede4] bg-white"
+                >
+                  <div className="flex items-center justify-between border-b border-[#f0f2ed] px-4 py-3.5 sm:px-5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#f2f5ef] text-lg">
+                        {category.emoji}
+                      </span>
+
+                      <h3 className="text-sm font-semibold text-[#303c2e]">
                         {category.label}
                       </h3>
-
-                      <span className="text-xs text-muted-foreground">
-                        {category.items.length}
-                      </span>
                     </div>
 
-                    <div className="space-y-1">
-                      {category.items.map((item) => (
-                        <ShoppingItemRow
-                          key={`${item.id}-${item.is_completed}`}
-                          id={item.id}
-                          name={item.name}
-                          quantity={item.quantity}
-                          unit={item.unit}
-                          isCompleted={item.is_completed}
-                        />
-                      ))}
-                    </div>
+                    <span className="text-xs font-medium text-[#929b8e]">
+                      {category.items.length} Artikel
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-dashed border-[#dfe6dc] px-4 py-10 text-center">
-                <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-green-600" />
-                <p className="font-medium text-[#202820]">Alles erledigt!</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Eure Einkaufsliste ist momentan leer.
-                </p>
-              </div>
-            )}
 
-            <Separator className="my-6" />
+                  <div className="divide-y divide-[#f1f3ef] px-2 sm:px-3">
+                    {category.items.map((item) => (
+                      <ShoppingItemRow
+                        key={`${item.id}-${item.is_completed}`}
+                        id={item.id}
+                        name={item.name}
+                        quantity={item.quantity}
+                        unit={item.unit}
+                        category={item.category}
+                        isCompleted={item.is_completed}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
 
-            {/* Completed items */}
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-semibold text-[#202820]">Erledigt</h2>
+              {uncategorizedItems.length > 0 && (
+                <div className="overflow-hidden rounded-2xl border border-[#e8ede4] bg-white">
+                  <div className="flex items-center justify-between border-b border-[#f0f2ed] px-4 py-3.5 sm:px-5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#f2f5ef] text-lg">
+                        🛒
+                      </span>
+                      <h3 className="text-sm font-semibold text-[#303c2e]">
+                        Sonstiges
+                      </h3>
+                    </div>
+                    <span className="text-xs font-medium text-[#929b8e]">
+                      {uncategorizedItems.length} Artikel
+                    </span>
+                  </div>
 
-              <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600">
-                {completedItems.length}
-              </span>
+                  <div className="divide-y divide-[#f1f3ef] px-2 sm:px-3">
+                    {uncategorizedItems.map((item) => (
+                      <ShoppingItemRow
+                        key={`${item.id}-${item.is_completed}`}
+                        id={item.id}
+                        name={item.name}
+                        quantity={item.quantity}
+                        unit={item.unit}
+                        category={item.category}
+                        isCompleted={item.is_completed}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-
-            {completedItems.length > 0 ? (
-              <div className="space-y-1">
-                {completedItems.map((item) => (
-                  <ShoppingItemRow
-                    key={`${item.id}-${item.is_completed}`}
-                    id={item.id}
-                    name={item.name}
-                    quantity={item.quantity}
-                    unit={item.unit}
-                    isCompleted={item.is_completed}
-                  />
-                ))}
+          ) : (
+            <div className="rounded-2xl border border-dashed border-[#dce5d7] bg-white px-5 py-12 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#eaf1e6] text-[#638c5b]">
+                <Check className="h-7 w-7" />
               </div>
-            ) : (
-              <p className="py-3 text-sm text-muted-foreground">
-                Noch keine Artikel erledigt.
+
+              <h3 className="font-semibold text-[#303c2e]">Alles erledigt!</h3>
+              <p className="mx-auto mt-2 max-w-xs text-sm text-[#818a7e]">
+                Ihr habt alle Produkte besorgt. Zeit, den Einkauf zu genießen!
               </p>
+            </div>
+          )}
+        </section>
+
+        {/* Completed items */}
+        {completedItems.length > 0 && (
+          <section className="mt-8">
+            <button
+              type="button"
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="flex w-full items-center justify-between rounded-2xl border border-[#e8ede4] bg-white px-4 py-4 text-left transition-colors hover:bg-[#fbfcfa] sm:px-5"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#eaf1e6] text-[#638c5b]">
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-[#303c2e]">
+                    Erledigte Produkte
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#929b8e]">
+                    {completedItems.length} Produkte
+                  </p>
+                </div>
+              </div>
+
+              <ChevronDown
+                className={`h-5 w-5 text-[#929b8e] transition-transform ${
+                  showCompleted ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {showCompleted && (
+              <div className="mt-2 overflow-hidden rounded-2xl border border-[#e8ede4] bg-white px-2 sm:px-3">
+                <div className="divide-y divide-[#f1f3ef]">
+                  {completedItems.map((item) => (
+                    <ShoppingItemRow
+                      key={`${item.id}-${item.is_completed}`}
+                      id={item.id}
+                      name={item.name}
+                      quantity={item.quantity}
+                      unit={item.unit}
+                      category={item.category}
+                      isCompleted={item.is_completed}
+                    />
+                  ))}
+                </div>
+              </div>
             )}
-          </CardContent>
-        </Card>
+          </section>
+        )}
+
+        {/* Shopping mode finish */}
+        {isShoppingMode && openItems.length === 0 && (
+          <div className="mt-6">
+            <Button
+              onClick={() => setIsShoppingMode(false)}
+              className="h-12 w-full rounded-xl bg-[#638c5b] font-semibold text-white hover:bg-[#52764b]"
+            >
+              Einkauf abschließen
+            </Button>
+          </div>
+        )}
       </div>
     </main>
   );

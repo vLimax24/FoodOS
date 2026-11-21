@@ -11,7 +11,7 @@ export async function getHousehold() {
 
   const { data: membership, error: membershipError } = await supabase
     .from("household_members")
-    .select("household_id")
+    .select("household_id, role")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -23,7 +23,10 @@ export async function getHousehold() {
     .eq("id", membership.household_id)
     .single();
 
-  if (householdError) return null;
+  if (householdError || !household) return null;
 
-  return household;
+  return {
+    ...household,
+    role: membership.role,
+  };
 }

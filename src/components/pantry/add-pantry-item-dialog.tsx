@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 
 import { SHOPPING_CATEGORIES } from "@/lib/shopping/categories";
 import { addPantryItem } from "@/app/actions/pantry";
+import { UNITS } from "@/lib/units";
 
 export function AddPantryItemDialog() {
   const [open, setOpen] = useState(false);
@@ -118,13 +119,24 @@ export function AddPantryItemDialog() {
 
             <div className="space-y-2">
               <Label htmlFor="pantry-unit">Einheit</Label>
-              <Input
+              <select
                 id="pantry-unit"
-                placeholder="z. B. Packungen"
                 value={unit}
                 onChange={(event) => setUnit(event.target.value)}
-                maxLength={30}
-              />
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Keine Einheit</option>
+
+                {UNITS.map((group) => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.options.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
             </div>
           </div>
 

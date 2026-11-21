@@ -3,6 +3,22 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getHousehold } from "@/lib/supabase/household";
 import HomeDashboard from "@/components/home/home-dashboard";
+import { getWeekStart } from "@/lib/meal-planner/date-utils";
+
+function getTodayInBerlin() {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Berlin",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  return `${year}-${month}-${day}`;
+}
 
 async function HomePageContent() {
   await connection();
@@ -50,6 +66,81 @@ async function HomePageContent() {
       .limit(1),
   ]);
 
+  const today = getTodayInBerlin();
+  const weekStart = getWeekStart(today);
+
+  const mealPlanResult = await supabase
+    .from("meal_plans")
+    .select("id")
+    .eq("household_id", household.id)
+    .eq("week_start", weekStart)
+    .maybeSingle();
+
+  let todayMeals: {
+    id: string;
+    mealType: "lunch" | "dinner";
+    recipe: {
+      id: string;
+      title: string;
+      image_url: string | null;
+      prep_time_minutes: number | null;
+      cook_time_minutes: number | null;
+    };
+  }[] = [];
+
+  if (mealPlanResult.error) {
+    console.error(
+      "Meal plan could not be loaded:",
+      mealPlanResult.error.message,
+    );
+  } else if (mealPlanResult.data) {
+    const plannedMealsResult = await supabase
+      .from("planned_meals")
+      .select("id, meal_type, recipe_id")
+      .eq("meal_plan_id", mealPlanResult.data.id)
+      .eq("date", today);
+
+    if (plannedMealsResult.error) {
+      console.error(
+        "Today's meals could not be loaded:",
+        plannedMealsResult.error.message,
+      );
+    } else if (plannedMealsResult.data.length > 0) {
+      const recipeIds = plannedMealsResult.data.map((meal) => meal.recipe_id);
+
+      const recipesForTodayResult = await supabase
+        .from("recipes")
+        .select("id, title, image_url, prep_time_minutes, cook_time_minutes")
+        .eq("household_id", household.id)
+        .in("id", recipeIds);
+
+      if (recipesForTodayResult.error) {
+        console.error(
+          "Today's recipes could not be loaded:",
+          recipesForTodayResult.error.message,
+        );
+      } else {
+        const recipesById = new Map(
+          recipesForTodayResult.data.map((recipe) => [recipe.id, recipe]),
+        );
+
+        todayMeals = plannedMealsResult.data.flatMap((meal) => {
+          const recipe = recipesById.get(meal.recipe_id);
+
+          if (!recipe) return [];
+
+          return [
+            {
+              id: meal.id,
+              mealType: meal.meal_type,
+              recipe,
+            },
+          ];
+        });
+      }
+    }
+  }
+
   if (shoppingResult.error) {
     console.error(
       "Shopping items could not be loaded:",
@@ -94,6 +185,7 @@ async function HomePageContent() {
       pantryItems={pantryItems.slice(0, 4)}
       recipeCount={recipesResult.count ?? 0}
       latestRecipe={recipesResult.data?.[0] ?? null}
+      todayMeals={todayMeals}
     />
   );
 }

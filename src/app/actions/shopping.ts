@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getHousehold } from "@/lib/supabase/household";
 import { SHOPPING_CATEGORIES } from "@/lib/shopping/categories";
+import { isValidUnit } from "@/lib/units";
 
 type AddShoppingItemResult = {
   success: boolean;
@@ -25,6 +26,12 @@ export async function addShoppingItem(
 
   const category = String(formData.get("category") ?? "sonstiges");
 
+  const rawQuantity = formData.get("quantity");
+  const quantity =
+    rawQuantity === null || rawQuantity === "" ? null : Number(rawQuantity);
+
+  const unit = String(formData.get("unit") ?? "").trim() || null;
+
   const validCategory = SHOPPING_CATEGORIES.some(
     (item) => item.value === category,
   );
@@ -33,6 +40,21 @@ export async function addShoppingItem(
     return {
       success: false,
       error: "Ungültige Kategorie.",
+    };
+  }
+
+  if (quantity !== null && (!Number.isFinite(quantity) || quantity <= 0)) {
+    return { success: false, error: "Ungültige Menge." };
+  }
+
+  if (unit && !isValidUnit(unit)) {
+    return { success: false, error: "Ungültige Einheit." };
+  }
+
+  if (unit && quantity === null) {
+    return {
+      success: false,
+      error: "Bitte gib auch eine Menge für die Einheit an.",
     };
   }
 
@@ -55,7 +77,9 @@ export async function addShoppingItem(
 
   const { error } = await supabase.from("shopping_items").insert({
     household_id: household.id,
-    name: name.trim(),
+    name,
+    quantity,
+    unit,
     category,
     created_by: user.id,
   });
@@ -65,6 +89,81 @@ export async function addShoppingItem(
     return {
       success: false,
       error: "Artikel konnte nicht hinzugefügt werden.",
+    };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/shopping");
+
+  return { success: true };
+}
+
+export async function updateShoppingItem(
+  itemId: string,
+  formData: FormData,
+): Promise<AddShoppingItemResult> {
+  const name = String(formData.get("name") ?? "").trim();
+  const category = String(formData.get("category") ?? "");
+  const rawQuantity = formData.get("quantity");
+  const quantity =
+    rawQuantity === null || rawQuantity === "" ? null : Number(rawQuantity);
+  const unit = String(formData.get("unit") ?? "").trim() || null;
+
+  if (!name) {
+    return { success: false, error: "Bitte gib einen Artikelnamen ein." };
+  }
+
+  if (name.length > 100) {
+    return { success: false, error: "Der Name ist zu lang." };
+  }
+
+  if (!SHOPPING_CATEGORIES.some((item) => item.value === category)) {
+    return { success: false, error: "Ungültige Kategorie." };
+  }
+
+  if (quantity !== null && (!Number.isFinite(quantity) || quantity <= 0)) {
+    return { success: false, error: "Ungültige Menge." };
+  }
+
+  if (unit && !isValidUnit(unit)) {
+    return { success: false, error: "Ungültige Einheit." };
+  }
+
+  if (unit && quantity === null) {
+    return {
+      success: false,
+      error: "Bitte gib auch eine Menge für die Einheit an.",
+    };
+  }
+
+  const supabase = await createClient();
+  const household = await getHousehold();
+
+  if (!household) {
+    return { success: false, error: "Kein Haushalt gefunden." };
+  }
+
+  const { data, error } = await supabase
+    .from("shopping_items")
+    .update({ name, quantity, unit, category })
+    .eq("id", itemId)
+    .eq("household_id", household.id)
+    .eq("is_completed", false)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Shopping item could not be updated:", error.message);
+    return {
+      success: false,
+      error: "Artikel konnte nicht gespeichert werden.",
+    };
+  }
+
+  if (!data) {
+    return {
+      success: false,
+      error: "Artikel wurde nicht gefunden oder ist bereits erledigt.",
     };
   }
 

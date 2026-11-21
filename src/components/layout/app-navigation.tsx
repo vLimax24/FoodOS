@@ -22,15 +22,25 @@ const navigation = [
   },
   { href: "/recipes", label: "Rezepte", mobile: "Rezepte", icon: ChefHat },
   { href: "/pantry", label: "Vorräte", mobile: "Vorräte", icon: Archive },
-  { href: "/planner", label: "Planung", mobile: "Planung", icon: CalendarDays },
+  {
+    href: "/meal-planner",
+    label: "Planung",
+    mobile: "Planung",
+    icon: CalendarDays,
+  },
 ];
 
 type AppNavigationProps = {
   householdName: string;
   userName: string;
+  avatarUrl: string | null;
 };
 
-export function AppNavigation({ householdName, userName }: AppNavigationProps) {
+export function AppNavigation({
+  householdName,
+  userName,
+  avatarUrl,
+}: AppNavigationProps) {
   const pathname = usePathname();
 
   function isActive(href: string) {
@@ -89,8 +99,16 @@ export function AppNavigation({ householdName, userName }: AppNavigationProps) {
         </nav>
 
         <div className="mt-auto flex items-center gap-3 border-t border-[#edf0eb] px-5 py-5">
-          <div className="flex size-10 items-center justify-center rounded-full bg-[#e8eee4] font-semibold text-[#55745b]">
-            {userName.charAt(0).toUpperCase()}
+          <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#e8eee4] font-semibold text-[#55745b]">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={`Profilbild von ${userName}`}
+                className="size-full object-cover"
+              />
+            ) : (
+              userName.charAt(0).toUpperCase()
+            )}
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{userName}</p>
@@ -101,20 +119,27 @@ export function AppNavigation({ householdName, userName }: AppNavigationProps) {
 
       {/* Mobile Topbar */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-[#e8ece5]/80 bg-white/90 px-4 backdrop-blur-xl md:hidden">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-[#edf4ed] text-[#39734a]">
-            <Leaf size={18} />
-          </div>
-          <span className="font-semibold tracking-tight">FoodOS</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/household"
+            aria-label="Haushalt verwalten"
+            className="flex size-9 items-center justify-center rounded-full bg-[#edf4ed] text-[#39734a] transition-colors hover:bg-[#e1ede1]"
+          >
+            <Users size={18} />
+          </Link>
 
-        <Link
-          href="/household"
-          aria-label="Haushalt verwalten"
-          className="flex size-9 items-center justify-center rounded-full bg-[#edf4ed] text-[#39734a] transition-colors hover:bg-[#e1ede1]"
-        >
-          <Users size={18} />
-        </Link>
+          <Link
+            href="/account"
+            aria-label="Mein Profil"
+            className="flex size-9 items-center justify-center overflow-hidden rounded-full border border-[#e8ece5] bg-[#e8eee4] font-semibold text-[#55745b]"
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="size-full object-cover" />
+            ) : (
+              userName.charAt(0).toUpperCase()
+            )}
+          </Link>
+        </div>
       </header>
 
       {/* Mobile Bottom Navigation */}

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getHousehold } from "@/lib/supabase/household";
 import { SHOPPING_CATEGORIES } from "@/lib/shopping/categories";
+import { isValidUnit } from "@/lib/units";
 
 type PantryResult = {
   success: boolean;
@@ -28,6 +29,10 @@ export async function addPantryItem(formData: FormData): Promise<PantryResult> {
 
   if (!Number.isFinite(quantity) || quantity < 0) {
     return { success: false, error: "Ungültige Menge." };
+  }
+
+  if (unit && !isValidUnit(unit)) {
+    return { success: false, error: "Ungültige Einheit." };
   }
 
   if (!Number.isFinite(minQuantity) || minQuantity < 0) {

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { getHousehold } from "@/lib/supabase/household";
 
 export async function createHousehold(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
@@ -27,7 +28,7 @@ export async function createHousehold(formData: FormData) {
     redirect("/onboarding?error=create-failed");
   }
 
-  redirect("/");
+  redirect("/onboarding?step=profile");
 }
 
 export async function joinHousehold(formData: FormData) {
@@ -59,6 +60,46 @@ export async function joinHousehold(formData: FormData) {
     }
 
     redirect("/onboarding?error=join-failed");
+  }
+
+  redirect("/onboarding?step=profile");
+}
+
+export async function finishOnboarding() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  const household = await getHousehold();
+
+  if (!household) {
+    redirect("/onboarding");
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("display_name")
+    .eq("user_id", user.id)
+    .single();
+
+  if (profileError || !profile?.display_name?.trim()) {
+    redirect("/onboarding?step=profile");
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      onboarding_completed_at: new Date().toISOString(),
+    })
+    .eq("user_id", user.id);
+
+  if (error) {
+    console.error("Finish onboarding failed:", error.message);
+    redirect("/onboarding?step=complete&error=finish-failed");
   }
 
   redirect("/");

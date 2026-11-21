@@ -23,17 +23,26 @@ export default async function AppShell({
 
   if (!household) redirect("/onboarding");
 
-  const metadataName =
-    user.user_metadata?.full_name ?? user.user_metadata?.name;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name, avatar_url, onboarding_completed_at")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!profile?.onboarding_completed_at) {
+    redirect("/onboarding?step=profile");
+  }
 
   const userName =
-    typeof metadataName === "string" && metadataName.trim()
-      ? metadataName.trim()
-      : (user.email?.split("@")[0] ?? "FoodOS");
+    profile.display_name?.trim() || user.email?.split("@")[0] || "FoodOS";
 
   return (
     <div className="min-h-dvh bg-[#f7f8f6] text-[#20251f]">
-      <AppNavigation householdName={household.name} userName={userName} />
+      <AppNavigation
+        householdName={household.name}
+        userName={userName}
+        avatarUrl={profile?.avatar_url ?? null}
+      />
 
       <main className="min-w-0 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:ml-64 md:pb-8">
         <div className="w-full min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10">

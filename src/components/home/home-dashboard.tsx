@@ -19,6 +19,7 @@ type ShoppingItem = {
   name: string;
   quantity: number | string | null;
   unit: string | null;
+  category: string | null;
   is_completed: boolean;
 };
 
@@ -43,6 +44,18 @@ type LatestRecipe = {
   created_at: string;
 };
 
+type TodayMeal = {
+  id: string;
+  mealType: "lunch" | "dinner";
+  recipe: {
+    id: string;
+    title: string;
+    image_url: string | null;
+    prep_time_minutes: number | null;
+    cook_time_minutes: number | null;
+  };
+};
+
 type HomeDashboardProps = {
   householdName: string;
   userName: string;
@@ -53,6 +66,7 @@ type HomeDashboardProps = {
   pantryItems: PantryItem[];
   recipeCount: number;
   latestRecipe: LatestRecipe | null;
+  todayMeals: TodayMeal[];
 };
 
 function getPantryStatus(item: PantryItem) {
@@ -99,8 +113,30 @@ export default function HomeDashboard({
   pantryItems,
   recipeCount,
   latestRecipe,
+  todayMeals,
 }: HomeDashboardProps) {
   const firstName = userName.split(" ")[0];
+
+  const currentHour = Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Berlin",
+      hour: "2-digit",
+      hourCycle: "h23",
+    }).format(new Date()),
+  );
+
+  const visibleTodayMeals = todayMeals
+    .filter((meal) => {
+      if (meal.mealType === "lunch" && currentHour >= 15) {
+        return false;
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      const order = { lunch: 0, dinner: 1 };
+      return order[a.mealType] - order[b.mealType];
+    });
 
   const totalRecipeTime = latestRecipe
     ? (latestRecipe.prep_time_minutes ?? 0) +
@@ -122,6 +158,108 @@ export default function HomeDashboard({
         <p className="mt-2 text-sm text-[#81897f] sm:text-base">
           Was steht heute bei euch an?
         </p>
+      </section>
+
+      {/* Today's meals */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold tracking-[0.13em] text-[#739276]">
+              EURE TAGESPLANUNG
+            </p>
+            <h2 className="mt-1 text-xl font-semibold">
+              Heute auf dem Speiseplan
+            </h2>
+          </div>
+
+          <Link
+            href="/meal-planner"
+            className="flex items-center gap-1 text-sm font-medium text-[#56815c] hover:underline"
+          >
+            Wochenplan
+            <ChevronRight size={16} />
+          </Link>
+        </div>
+
+        {visibleTodayMeals.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {visibleTodayMeals.map((meal) => {
+              const totalTime =
+                (meal.recipe.prep_time_minutes ?? 0) +
+                (meal.recipe.cook_time_minutes ?? 0);
+
+              return (
+                <Link
+                  key={meal.id}
+                  href={`/recipes/${meal.recipe.id}`}
+                  className="group flex min-w-0 overflow-hidden rounded-2xl border border-[#e8ece5] bg-white transition-all hover:border-[#c8d9c8] hover:shadow-sm"
+                >
+                  <div
+                    className="relative min-h-32 w-28 shrink-0 bg-[#edf2eb] bg-cover bg-center sm:w-32"
+                    style={
+                      meal.recipe.image_url
+                        ? {
+                            backgroundImage: `url("${meal.recipe.image_url}")`,
+                          }
+                        : undefined
+                    }
+                  >
+                    {!meal.recipe.image_url && (
+                      <div className="flex h-full min-h-32 items-center justify-center text-[#9aaf96]">
+                        <ChefHat size={36} strokeWidth={1.2} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex min-w-0 flex-1 flex-col justify-center p-4">
+                    <span className="text-xs font-semibold text-[#739276]">
+                      {meal.mealType === "lunch" ? "MITTAGESSEN" : "ABENDESSEN"}
+                    </span>
+
+                    <h3 className="mt-1 line-clamp-2 text-sm font-semibold">
+                      {meal.recipe.title}
+                    </h3>
+
+                    {totalTime > 0 && (
+                      <p className="mt-2 flex items-center gap-1.5 text-xs text-[#92998f]">
+                        <Clock3 size={13} />
+                        {totalTime} Minuten
+                      </p>
+                    )}
+
+                    <span className="mt-3 flex items-center gap-1 text-xs font-medium text-[#56815c] transition-transform group-hover:translate-x-1">
+                      Rezept ansehen
+                      <ChevronRight size={14} />
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-[#dce5d9] bg-[#f9fbf8] px-5 py-8 text-center">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#edf4ed] text-[#56815c]">
+              <Utensils size={23} />
+            </div>
+
+            <h3 className="mt-3 font-semibold">
+              Heute ist noch nichts geplant
+            </h3>
+
+            <p className="mx-auto mt-1 max-w-sm text-sm text-[#81897f]">
+              Plant eure nächste Mahlzeit und behaltet den Überblick darüber,
+              was heute auf den Tisch kommt.
+            </p>
+
+            <Link
+              href="/meal-planner"
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#56815c] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#456e4b]"
+            >
+              <Plus size={16} />
+              Mahlzeit planen
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* Latest recipe */}
@@ -298,6 +436,7 @@ export default function HomeDashboard({
                   id={item.id}
                   name={item.name}
                   quantity={item.quantity}
+                  category={item.category}
                   unit={item.unit}
                   isCompleted={item.is_completed}
                 />
