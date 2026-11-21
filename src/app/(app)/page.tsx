@@ -43,7 +43,9 @@ async function HomePageContent() {
   const [shoppingResult, pantryResult, recipesResult] = await Promise.all([
     supabase
       .from("shopping_items")
-      .select("id, name, quantity, unit, is_completed", { count: "exact" })
+      .select("id, name, quantity, unit, category, is_completed", {
+        count: "exact",
+      })
       .eq("household_id", household.id)
       .eq("is_completed", false)
       .order("created_at", { ascending: false })
